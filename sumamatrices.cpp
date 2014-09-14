@@ -13,10 +13,10 @@ double **allocateMatrix() {
   int i;
   double *vals, **temp;
 
-  // allocate values
+//Crear una  matriz
   vals = (double *) malloc (matrizTam * matrizTam * sizeof(double));
 
-  // allocate vector of pointers
+
   temp = (double **) malloc (matrizTam * sizeof(double*));
 
   for(i=0; i < matrizTam; i++)
@@ -25,10 +25,12 @@ double **allocateMatrix() {
   return temp;
 }
 
+
+//Imprimir una matriz
 void printMatrix(double **mat) {
   int i,j;
 
-  printf("La %d * %d matriz es\n", matrizTam, matrizTam);
+  printf(" %d * %d es\n\n", matrizTam, matrizTam);
   for(i=0; i < matrizTam; i++){
     for(j=0; j < matrizTam; j++)
       printf("%lf ",  mat[i][j]);
@@ -36,7 +38,9 @@ void printMatrix(double **mat) {
   }
 }
 
-void mm(int myId) {
+
+//funcion del worker o hilo para sumar por filas
+void sumar(int myId) {
   int i,j,k;
   double sum;
 
@@ -44,22 +48,24 @@ void mm(int myId) {
   int inicio_fila = myId * matrizTam/numThreads;
   int fin_fila = (myId+1) * (matrizTam/numThreads) - 1;
 
-  // Multiplicaion de Matrices Sobre la Division
+  // Multiplicacion de Matrices
   for (i = inicio_fila; i <= fin_fila; i++) {
     for (j = 0; j < matrizTam; j++) {
       sum = 0.0;
-      for (k = 0; k < matrizTam; k++) {
-	sum = sum + a[i][k] * b[k][j];
-      }
-      c[i][j] = sum;
+      //for (k = 0; k < matrizTam; k++) {
+	c[i][j] =  a[i][j] + b[i][j];
+
+      //}
+
     }
   }
 }
 
+//hilo
 void *worker(void *arg)
 {
   int id = *((int *) arg);
-  mm(id);
+  sumar(id);
   return NULL;
 }
 
@@ -68,15 +74,20 @@ int main(int argc, char *argv[]) {
   int i, j;
   int *p;
   pthread_t *threads;
-  matrizTam = 9;
-  numThreads = 3;
 
+  //Aca se define el tamano de la matriz y el numero de hilos
+  matrizTam = 8;
+  numThreads = 4;
+
+
+  //Creando la matrices
   a = allocateMatrix();
   b = allocateMatrix();
   c = allocateMatrix();
 
-//imprimir
 
+
+//llenando la matriz
   for (i = 0; i < matrizTam; i++)
     for (j = 0; j < matrizTam; j++) {
       a[i][j] = i + j;
@@ -97,9 +108,12 @@ int main(int argc, char *argv[]) {
   for (i = 0; i < numThreads; i++) {
     pthread_join(threads[i], NULL);
   }
-
+    cout<<"Matriz A";
     printMatrix(a);
+    cout<<endl;
+    cout<<"Matriz A";
     printMatrix(b);
     cout<<endl;
+    cout<<"Matriz Resultado";
     printMatrix(c);
 }
