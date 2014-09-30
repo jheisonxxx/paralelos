@@ -1,0 +1,29 @@
+# depslib dependency file v1.0
+1411821165 source:c:\users\jheison\desktop\jheison-practica lab\contadordepalabras\main.cpp
+	<stdio.h>
+	<windows.h>
+	<ctype.h>
+	<tchar.h>
+	<sys/types.h>
+	<pthread.h>
+	<conio.h>
+	<iostream>
+
+1411824384 source:c:\users\jheison\documents\github\paralelos\contadordepalabras\main.cpp
+	<stdio.h>
+	<windows.h>
+	<ctype.h>
+	<tchar.h>
+	<sys/types.h>
+	<pthread.h>
+	<conio.h>
+	<iostream>
+	<stdio.h>
+	<windows.h>
+	<ctype.h>
+	<tchar.h>
+	<sys/types.h>
+	<pthread.h>
+	<conio.h>
+	<iostream>
+
