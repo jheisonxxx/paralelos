@@ -1,0 +1,29 @@
+
+#include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(int argc, char** argv) {
+  const int LIMITE = 20;
+  MPI_Init(NULL, NULL);
+ 
+  int miRank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &miRank);
+  int procs;
+  MPI_Comm_size(MPI_COMM_WORLD, &procs);
+
+  int count = 0;
+  int tag = (miRank + 1) % 2;
+  while (count < LIMITE) {
+    if (miRank == count % 2) {
+      count++;
+      MPI_Send(&count, 1, MPI_INT, tag, 0, MPI_COMM_WORLD);
+      printf("Proceso %d envia al proceso %d y incrementa Contador: %d\n",miRank,tag,count);
+    } else {
+      MPI_Recv(&count, 1, MPI_INT, tag, 0, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      printf("Proceso %d recibe de %d Contador: %d \n",miRank, tag, count);
+    }
+  }
+  MPI_Finalize();
+}
