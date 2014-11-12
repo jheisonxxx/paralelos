@@ -1,9 +1,7 @@
 #include "mpi.h"
 #include <math.h>
 
-int main(argc,argv)
-int argc;
-char *argv[];
+int main(int argc,char *argv[])
 {
     int cero = 0, n, myid, numprocs, i;
     double valor_de_pi = 3.141592653589793238462643;
