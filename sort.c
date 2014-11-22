@@ -1,73 +1,181 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
 #include <mpi.h>
 #include <omp.h>
 
-#define TAM 1000
 
-int main(int argc, char** argv){
-  int i;
-  int procs, miRank;
-  int parte, ind=0;
-  MPI_Status st;
+void merge(int *, int *, int, int, int);
+void mergeSort(int *, int *, int, int);
 
-  int vet[TAM];//vector inicial
-  int sol[TAM];//vector respuesta
-
-  MPI_Init(&argc, &argv);
-  MPI_Comm_size(MPI_COMM_WORLD, &procs);
-  MPI_Comm_rank(MPI_COMM_WORLD, &miRank);
-
-  parte = (int)(TAM/(procs-1));
-
-  int res=(TAM%(procs-1));//Por ejemplo, si tam=100 y procs=28 => parte=3; 
-                          //Me faltan 19 datos que procesar (100-(3*27))
-                            
-    
-  if(miRank==0){//proc master
-    for(i=0;i<TAM;i++){//inicializo el vector => TAM...1
-      vet[i]=TAM-i;
-    }
-    for(i=1;i<procs;i++){//envio las partes para ser ordenadas            
-      MPI_Send(&vet[ind],parte,MPI_INT,i,i,MPI_COMM_WORLD);
-      ind=ind+parte;
-    }
-    
-    if(res){//si hay res, entonces necesito un proceso extra para ordenar estos datos.
-            //como no puedo crear un proc extra, el master ordenara las partes que faltan
-
-  //   #pragma omp parallel private(i,sol) shared(vet)
-     //{      
-	#pragma omp for schedule(dynamic)
-	for(i=0;i<res;i++){//ordena datos que faltan
-	sol[i]=vet[TAM-1-i];
+int main(int argc, char** argv) {
+	
+	//Crear Vector y Llenar Aleatoriamente
+	int tam_vector = 1000;
+	//printf(atoi(argv[0]));
+	int * vector_original = (int*)malloc(tam_vector * sizeof(int));
+	
+	
+	int c;
+	srand(time(NULL));
+	//printf("Vector Desordenado:  ");
+	for(c = 0; c < tam_vector; c++) {
+		vector_original[c] = rand() % tam_vector;
+		//printf("%d ", vector_original[c]);
 	}
-//     }
-    }
+
+	//printf("\n");
+	//printf("\n");
+	
+	
+	//Iniciar MPI
+	int miRank;
+	int procs;
+	
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &miRank);
+	MPI_Comm_size(MPI_COMM_WORLD, &procs);
+	
+	
+	if(miRank==0){
+		printf("Vector Desordenado:  ");
+		for(c = 0; c < tam_vector; c++) {
+			printf("%d ", vector_original[c]);
+		}
+		printf("\n");
+		printf("\n");
+	}
+		
+	//Dividir el vector en partes iguales 
+	int tam = tam_vector/procs;
+	//Enviar cada sub_vector a cada proceso 
+	int *sub_vector = (int*)malloc(tam * sizeof(int));
+	MPI_Scatter(vector_original, tam, MPI_INT, sub_vector, tam, MPI_INT, 0, MPI_COMM_WORLD);
+	
 
 	
-    for(i=1;i<procs;i++){//recive datos ordenados y los almacena en sol
-      MPI_Recv(&sol[TAM-i*parte], parte, MPI_INT,i, MPI_ANY_TAG, MPI_COMM_WORLD, &st);            
-    }
-    
-    for(i=0;i<TAM;i++){//imprime vector sol
-      printf("%d ", sol[i]);
-    }
-    printf("\n");
-  }
-  else{//proc esclavos
-    MPI_Recv(vet, parte, MPI_INT, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &st);//recivo datos de master
-    //#pragma omp parallel private(i,sol) shared(vet)
-    //{      
-	   #pragma omp for schedule(dynamic)
-	    for(i=0;i<parte;i++){//ordeno master y los guardo en sol
-	      sol[i]=vet[parte-1-i];
-	    }
-	    //ind=st.MPI_TAG-1*parte;
-	    MPI_Send(sol,parte,MPI_INT,0,miRank,MPI_COMM_WORLD);//envio a master datos ordenados
-     // }
-    }
+	//Merge Sort para cada proceso y subvector
+	
+	int *tmp_vector = (int*)malloc(tam * sizeof(int));
+	mergeSort(sub_vector, tmp_vector, 0, (tam - 1));
+	
+	//Gather vectores ordenados en uno
+	
+	int * ordenado = NULL;
+	if(miRank == 0) {
+		
+		ordenado  = (int*)malloc(tam_vector * sizeof(int));
+		
+		}
+	
+	MPI_Gather(sub_vector, tam, MPI_INT, ordenado , tam, MPI_INT, 0, MPI_COMM_WORLD);
+	
+	//Ultima llamada a funcion merge
+	if(miRank == 0) {
+		
+		int *other_vector = (int*)malloc(tam_vector * sizeof(int));
+		mergeSort(ordenado , other_vector, 0, (tam_vector - 1));
+		
+		//Imprimir Vector
+		printf("Vector Ordenado: ");
+		for(c = 0; c < tam_vector; c++) {
+			
+			printf("%d ", ordenado [c]);
+			
+			}
+			
+		printf("\n");
+		printf("\n");
+			
+		}
+	
+	
+	
+	//Fin MPI
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Finalize();
+	
+	}
 
-  MPI_Finalize();
-  
-  return 0;
+//Funcion Merge
+void merge(int *a, int *b, int l, int m, int r) {
+	
+	int h, i, j, k;
+	h = l;
+	i = l;
+	j = m + 1;
+	
+	#pragma omp parallel //schedule(dynamic,1)
+	while((h <= m) && (j <= r)) {
+		
+		if(a[h] <= a[j]) {
+			
+			b[i] = a[h];
+			h++;
+			
+			}
+			
+		else {
+			
+			b[i] = a[j];
+			j++;
+			
+			}
+			
+		i++;
+		
+		}
+		
+	if(m < h) {
+		#pragma omp parallel for schedule(dynamic,1)
+		for(k = j; k <= r; k++) {
+			
+			b[i] = a[k];
+			i++;
+			
+			}
+			
+		}
+		
+	else {
+		#pragma omp parallel for schedule(dynamic,1)
+		for(k = h; k <= m; k++) {
+			
+			b[i] = a[k];
+			i++;
+			
+			}
+			
+		}
+	
+	#pragma omp parallel for schedule(dynamic,1)
+	for(k = l; k <= r; k++) {
+		
+		a[k] = b[k];
+		
+		}
+		
+	}
+
+//Funcion Recursiva
+void mergeSort(int *a, int *b, int l, int r) {
+		
+	int m;
+	
+	if(l < r) {
+		
+		m = (l + r)/2;
+		#pragma omp parallel sections
+		{	
+			#pragma omp section
+				mergeSort(a, b, l, m);
+			#pragma omp section
+				mergeSort(a, b, (m + 1), r);
+		}
+		
+		merge(a, b, l, m, r);
+		
+	}
+		
 }
+
